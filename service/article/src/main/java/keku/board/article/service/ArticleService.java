@@ -17,7 +17,6 @@ public class ArticleService {
   private final Snowflake snowflake = new Snowflake();
   private final ArticleRepository articleRepository;
 
-
   @Transactional
   public ArticleResponse create(ArticleCreateRequest request) {
     Article article = articleRepository.save(

@@ -1,9 +1,11 @@
 package keku.board.article.service;
 
+import java.util.List;
 import keku.board.article.entity.Article;
 import keku.board.article.repository.ArticleRepository;
 import keku.board.article.service.request.ArticleCreateRequest;
 import keku.board.article.service.request.ArticleUpdateRequest;
+import keku.board.article.service.response.ArticlePageResponse;
 import keku.board.article.service.response.ArticleResponse;
 import kuke.board.common.snowflake.Snowflake;
 import lombok.RequiredArgsConstructor;
@@ -41,4 +43,25 @@ public class ArticleService {
   public void delete(Long articleId) {
     articleRepository.deleteById(articleId);
   }
+
+  public ArticlePageResponse readAll(Long boardId, Long page, Long pageSize) {
+    return ArticlePageResponse.of(
+        articleRepository.findAll(boardId, (page - 1) * pageSize, pageSize).stream()
+            .map(ArticleResponse::from)
+            .toList(),
+        articleRepository.count(
+            boardId,
+            PageLimitCalculator.calculatePageLimit(page, pageSize, 10L)
+        )
+    );
+  }
+
+  public List<ArticleResponse> readAllInfiniteScroll(Long boardId, Long pageSize, Long lastArticleId) {
+    List<Article> articles = lastArticleId == null ?
+        articleRepository.findAllInfiniteScroll(boardId, pageSize) :
+        articleRepository.findAllInfiniteScroll(boardId, pageSize, lastArticleId);
+
+    return articles.stream().map(ArticleResponse::from).toList();
+  }
+
 }

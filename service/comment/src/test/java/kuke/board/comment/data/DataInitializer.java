@@ -1,19 +1,19 @@
-package kuke.board.article.data;
+package kuke.board.comment.data;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import kuke.board.article.ArticleApplication;
-import kuke.board.article.entity.Article;
+import kuke.board.comment.CommentApplication;
+import kuke.board.comment.entity.Comment;
 import kuke.board.common.snowflake.Snowflake;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest(classes = ArticleApplication.class)
+@SpringBootTest(classes = CommentApplication.class)
 public class DataInitializer {
 
   @PersistenceContext
@@ -46,20 +46,20 @@ public class DataInitializer {
   @Test
   void insert() {
     transactionTemplate.executeWithoutResult(status -> {
+      Comment prev = null;
+
+      // i가 짝수면 상위 댓글이 없고, 홀수면 이전 댓글을 상위 댓글로 지정
       for (int i = 0; i < BULK_INSERT_SIZE; i++) {
-        Article article = Article.create(
+        Comment comment = Comment.create(
             snowflake.nextId(),
-            "title" + 1,
-            "content" + 1,
+            "conent",
+            i % 2 == 0 ? null : prev.getCommentId(),
             1L,
             1L
         );
-        // Article 객체를 영속성 컨텍스트에 등록하고
-        // 트랜잭션 커밋 시점에 DB에 insert 실행
-        entityManager.persist(article);
-        // save를 하면 새로운 객체는 insert, 이미 있으면 update
-        // persist를 하면 insert만 함 (새 객체를 저장)
-        // 만약 같은 ID가 있으면 예외 발생
+
+        prev = comment;
+        entityManager.persist(comment);
       }
     });
   }

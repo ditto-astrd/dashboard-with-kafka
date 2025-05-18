@@ -1,24 +1,22 @@
-package kuke.board.article.data;
+package kuke.board.comment.data;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import kuke.board.article.ArticleApplication;
-import kuke.board.article.entity.Article;
+import kuke.board.comment.entity.CommentPath;
+import kuke.board.comment.entity.CommentV2;
 import kuke.board.common.snowflake.Snowflake;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest(classes = ArticleApplication.class)
-public class DataInitializer {
-
+@SpringBootTest
+public class DataInitializerV2 {
   @PersistenceContext
   EntityManager entityManager;
-
   @Autowired
   TransactionTemplate transactionTemplate;
   Snowflake snowflake = new Snowflake();
@@ -27,14 +25,15 @@ public class DataInitializer {
   static final int BULK_INSERT_SIZE = 2000;
   static final int EXECUTE_COUNT = 6000;
 
+
   @Test
   void initialize() throws InterruptedException {
-    // 10개의 thread pool을 사용해 동시에 실행
     ExecutorService executorService = Executors.newFixedThreadPool(10);
-
-    for (int i = 0; i < EXECUTE_COUNT; i++) {
+    for(int i = 0; i < EXECUTE_COUNT; i++) {
+      int start = i * BULK_INSERT_SIZE;
+      int end = (i + 1) * BULK_INSERT_SIZE;
       executorService.submit(() -> {
-        insert();
+        insert(start, end);
         latch.countDown();
         System.out.println("latch.getCount() = " + latch.getCount());
       });
@@ -43,24 +42,31 @@ public class DataInitializer {
     executorService.shutdown();
   }
 
-  @Test
-  void insert() {
+  void insert(int start, int end) {
     transactionTemplate.executeWithoutResult(status -> {
-      for (int i = 0; i < BULK_INSERT_SIZE; i++) {
-        Article article = Article.create(
+      for(int i = start; i < end; i++) {
+        CommentV2 comment = CommentV2.create(
             snowflake.nextId(),
-            "title" + 1,
-            "content" + 1,
+            "content",
             1L,
-            1L
+            1L,
+            toPath(i)
         );
-        // Article 객체를 영속성 컨텍스트에 등록하고
-        // 트랜잭션 커밋 시점에 DB에 insert 실행
-        entityManager.persist(article);
-        // save를 하면 새로운 객체는 insert, 이미 있으면 update
-        // persist를 하면 insert만 함 (새 객체를 저장)
-        // 만약 같은 ID가 있으면 예외 발생
+        entityManager.persist(comment);
       }
     });
+  }
+
+  private static final String CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+  private static final int DEPTH_CHUNK_SIZE = 5;
+
+  CommentPath toPath(int value) {
+    String path = "";
+    for (int i=0; i < DEPTH_CHUNK_SIZE; i++) {
+      path = CHARSET.charAt(value % CHARSET.length()) + path;
+      value /= CHARSET.length();
+    }
+    return CommentPath.create(path);
   }
 }

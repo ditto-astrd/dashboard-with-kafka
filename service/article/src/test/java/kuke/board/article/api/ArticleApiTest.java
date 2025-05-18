@@ -1,8 +1,8 @@
 package kuke.board.article.api;
 
 import java.util.List;
-import keku.board.article.service.response.ArticlePageResponse;
-import keku.board.article.service.response.ArticleResponse;
+import kuke.board.article.service.response.ArticlePageResponse;
+import kuke.board.article.service.response.ArticleResponse;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.junit.jupiter.api.Test;
@@ -99,6 +99,27 @@ public class ArticleApiTest {
     for (ArticleResponse articleResponse : articles2) {
       System.out.println("articles2.getArticleId()" + articleResponse.getArticleId());
     }
+  }
+
+  @Test
+  void countTest() {
+    ArticleResponse response = create(new ArticleCreateRequest("hi", "conent", 1L, 2L));
+
+    Long count1 = restClient.get()
+        .uri("/v1/articles/boards/{boardId}/count", 2L)
+        .retrieve()
+        .body(Long.class);
+    System.out.println("count1 = " + count1);
+
+    restClient.delete()
+        .uri("/v1/articles/{articleId}", response.getArticleId())
+        .retrieve();
+
+    Long count2 = restClient.get()
+        .uri("/v1/articles/boards/{boardId}/count", 2L)
+        .retrieve()
+        .body(Long.class);
+    System.out.println("count1 = " + count2);
   }
 
   @Getter
